@@ -80,8 +80,7 @@ CHAIN_CONFIG = [
     {"chain":"Hirocoin"},
     {"chain":"Bitleu"},
     {"chain":"Maxcoin"},
-    {"chain":"Darkcoin"},
-    {"chain":"BlackCoin"},
+    {"chain":"Ultracoin"},
     #{"chain":"",
     # "code3":"", "address_version":"\x", "magic":""},
     ]
@@ -2560,7 +2559,7 @@ store._ddl['txout_approx'],
         rpcport     = conf.get("rpcport", chain.datadir_rpcport)
         url = "http://" + rpcuser + ":" + rpcpassword + "@" + rpcconnect \
             + ":" + str(rpcport)
-
+        store.log.debug(url)
         def rpc(func, *params):
             store.rpclog.info("RPC>> %s %s", func, params)
             ret = util.jsonrpc(url, func, *params)
@@ -2931,9 +2930,9 @@ store._ddl['txout_approx'],
         if number is None:
             number = dircfg['blkfile_number']
         if number > 9999:
-            return os.path.join(dircfg['dirname'], "blocks", "blk%05d.dat"
+            return os.path.join(dircfg['dirname'], "blocks", "blk-v2-%04d.dat"
                                 % (number - 100000,))
-        return os.path.join(dircfg['dirname'], "blk%04d.dat" % (number,))
+        return os.path.join(dircfg['dirname'], "blk-v2-%04d.dat" % (number,))
 
     def save_blkfile_offset(store, dircfg, offset):
         store.sql("""
