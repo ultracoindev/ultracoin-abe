@@ -82,6 +82,7 @@ CHAIN_CONFIG = [
     {"chain":"Maxcoin"},
     {"chain":"Dash"},
     {"chain":"BlackCoin"},
+    {"chain":"Ultracoin"},
     {"chain":"Unbreakablecoin"},
     #{"chain":"",
     # "code3":"", "address_version":"\x", "magic":""},
@@ -662,12 +663,47 @@ store._ddl['configvar'],
     block_total_ss NUMERIC(28) NULL,
     block_num_tx  NUMERIC(10) NOT NULL,
     block_ss_destroyed NUMERIC(28) NULL,
+    block_difficulty DECIMAL(16,8) NULL,
     FOREIGN KEY (prev_block_id)
         REFERENCES block (block_id),
     FOREIGN KEY (search_block_id)
         REFERENCES block (block_id)
 )""",
+"""CREATE TABLE `hashdiff` (
+  `block_id` decimal(14,0) NOT NULL,
+  `block_difficulty` decimal(16,8) NOT NULL,
+  `hashrate` decimal(28,0) NOT NULL,
+  `timeDiff` decimal(20,0) NOT NULL,
+  `block_nTime` decimal(20,0) NOT NULL,
+  PRIMARY KEY (`block_id`)
+)""",
+"""CREATE PROCEDURE `update_hashdiff`()
+BEGIN
 
+DECLARE hashdiffBlock DECIMAL(14,0);
+
+SET @hashdiffBlock = (SELECT MAX(block_id) FROM `hashdiff`);
+
+
+INSERT INTO hashdiff
+SELECT
+block_id, block_difficulty, timeDiff,
+((block_difficulty * pow (2, 32))/(timeDiff/120)) AS hashrate,
+block_nTime
+FROM
+(
+SELECT
+    b1.block_id,
+    b1.block_difficulty,
+    (b1.block_nTime - b2.block_nTime) as timeDiff,
+    b1.block_nTime
+FROM abe.`block` b2 INNER JOIN abe.`block` b1
+ON b2.block_id = b1.block_id - 120
+WHERE b1.block_id > @hashdiffBlock OR @hashdiffBlock IS NULL
+) tmp;
+
+END
+""",
 # CHAIN comprises a magic number, a policy, and (indirectly via
 # CHAIN_LAST_BLOCK_ID and the referenced block's ancestors) a genesis
 # block, possibly null.  A chain may have a currency code.
@@ -1126,9 +1162,9 @@ store._ddl['txout_approx'],
                     prev_block_id, block_chain_work, block_value_in,
                     block_value_out, block_total_satoshis,
                     block_total_seconds, block_total_ss, block_num_tx,
-                    search_block_id
+                    search_block_id, block_difficulty
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )""",
                 (block_id, store.hashin(b['hash']), store.intin(b['version']),
                  store.hashin(b['hashMerkleRoot']), store.intin(b['nTime']),
@@ -1138,7 +1174,8 @@ store._ddl['txout_approx'],
                  store.intin(b['value_in']), store.intin(b['value_out']),
                  store.intin(b['satoshis']), store.intin(b['seconds']),
                  store.intin(b['total_ss']),
-                 len(b['transactions']), b['search_block_id']))
+                 len(b['transactions']), b['search_block_id'],
+                 store.intin(util.calculate_difficulty(b['nBits']))))
 
         except store.dbmodule.DatabaseError:
 
@@ -2561,7 +2598,7 @@ store._ddl['txout_approx'],
         rpcport     = conf.get("rpcport", chain.datadir_rpcport)
         url = "http://" + rpcuser + ":" + rpcpassword + "@" + rpcconnect \
             + ":" + str(rpcport)
-
+        store.log.debug(url)
         def rpc(func, *params):
             store.rpclog.info("RPC>> %s %s", func, params)
             ret = util.jsonrpc(url, func, *params)
@@ -2938,9 +2975,9 @@ store._ddl['txout_approx'],
         if number is None:
             number = dircfg['blkfile_number']
         if number > 9999:
-            return os.path.join(dircfg['dirname'], "blocks", "blk%05d.dat"
+            return os.path.join(dircfg['dirname'], "blocks", "blk-v2-%04d.dat"
                                 % (number - 100000,))
-        return os.path.join(dircfg['dirname'], "blk%04d.dat" % (number,))
+        return os.path.join(dircfg['dirname'], "blk-v2-%04d.dat" % (number,))
 
     def save_blkfile_offset(store, dircfg, offset):
         store.sql("""

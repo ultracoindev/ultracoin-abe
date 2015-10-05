@@ -14,21 +14,21 @@
 # License along with this program.  If not, see
 # <http://www.gnu.org/licenses/agpl.html>.
 
-from . import BaseChain
 
-UTC_START_TIME = 1388361600;
+from .ScryptJaneChain import ScryptJaneChain
+from .PpcPosChain import PpcPosChain
 
-class ScryptJaneChain(BaseChain):
-    """
-    A blockchain that uses Scrypt-Jane to hash block headers.
-    The current implementation requires the utc_scrypt module.
-    The ScryptJaneChain policy must be subclassed to provide the start_time
-    parameter in Unix time_t format.
-    """
+class Ultracoin(ScryptJaneChain, PpcPosChain):
+    def __init__(chain, **kwargs):
+        chain.name = 'Ultracoin'
+        chain.code3 = 'UTC'
+        chain.address_version = "\x44"
+        chain.script_addr_vers = '\x06'
+        chain.magic = "\xd9\xe6\xe7\xf5"
+        chain.decimals = 6
+        super(Ultracoin, chain).__init__(**kwargs)
 
-    POLICY_ATTRS = BaseChain.POLICY_ATTRS + ['start_time']
+    datadir_conf_file_name = "ultracoin.conf"
+    datadir_rpcport = 44201
+    start_time = 1388361600
 
-    def block_header_hash(chain, header):
-        import utc_scrypt
-        b = chain.parse_block_header(header)
-        return utc_scrypt.getPoWHash(header, b['nTime'] + UTC_START_TIME - chain.start_time)

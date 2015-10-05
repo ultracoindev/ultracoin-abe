@@ -562,7 +562,7 @@ class Abe:
         body += abe.short_link(page, 'b/' + block_shortlink(b['hash']))
 
         is_stake_chain = chain.has_feature('nvc_proof_of_stake')
-        is_stake_block = is_stake_chain and b['is_proof_of_stake']
+        is_stake_block = is_stake_chain and b.get('is_proof_of_stake', "false")
 
         body += ['<p>']
         if is_stake_chain:
@@ -1931,7 +1931,7 @@ def serve(store):
                 abe.log.log(0, "process %d found alive", wpid)
                 Timer(interval, watch).start()
             Timer(interval, watch).start()
-        WSGIServer(abe).run()
+        WSGIServer(abe, bindAddress='/tmp/python-fcgi-utcbex.sock').run()
 
 def process_is_alive(pid):
     # XXX probably fails spectacularly on Windows.

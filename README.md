@@ -19,6 +19,16 @@ uses a completely new implementation.
 Installation
 ------------
 
+Prereqs: (inside the ultracoin-abe directory)
+
+    sudo setup.py install
+    sudo pip install pycrypto
+    sudo apt-get install libmysqlclient-dev
+    sudo pip install MySQL-python
+    cd ultracoin_scrypt
+    sudo python setup.py install
+    cd ..
+
 Issue:
 
     python setup.py install
